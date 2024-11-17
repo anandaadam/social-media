@@ -13,14 +13,11 @@ import (
 	"gorm.io/gorm"
 )
 
-// UserServiceImpl adalah struct yang mengimplementasikan interface UserService.
 type UserServiceImpl struct {
 	UserRepository user_repository.UserRepository
 	DB             *gorm.DB
-	// Tambahkan dependensi yang diperlukan di sini, seperti repository atau logger.
 }
 
-// NewUserService membuat instance baru dari UserServiceImpl.
 func NewUserService(userRepository user_repository.UserRepository, db *gorm.DB) *UserServiceImpl {
 	return &UserServiceImpl{
 		UserRepository: userRepository,
@@ -28,9 +25,7 @@ func NewUserService(userRepository user_repository.UserRepository, db *gorm.DB) 
 	}
 }
 
-// CreateUser adalah implementasi dari method CreateUser di UserService.
 func (userService *UserServiceImpl) CreateUser(ctx *fiber.Ctx, userRequest *user.CreateUserRequest) (string, error) {
-	// Hash password
 	var email string
 	password, err := helpers.HashPassword(userRequest.Password)
 	if err != nil {
@@ -38,10 +33,16 @@ func (userService *UserServiceImpl) CreateUser(ctx *fiber.Ctx, userRequest *user
 	}
 	userRequest.Password = password
 
-	// Start database transaction
+	username := helpers.GenerateUsername(userRequest.Email)
+
+	userInput := &user.User{}
+	userInput.Email = userRequest.Email
+	userInput.Password = userRequest.Password
+	userInput.Username = username
+
 	err = userService.DB.Transaction(func(tx *gorm.DB) error {
 		var err error
-		email, err = userService.UserRepository.CreateUser(ctx, tx, userRequest)
+		email, err = userService.UserRepository.CreateUser(ctx, tx, userInput)
 		if err != nil {
 			return fmt.Errorf("failed to create user: %w", err)
 		}
@@ -51,13 +52,12 @@ func (userService *UserServiceImpl) CreateUser(ctx *fiber.Ctx, userRequest *user
 		return "", fmt.Errorf("transaction failed: %w", err)
 	}
 
-	// Initialize Kafka producer
 	producer, err := kafka.NewProducer(config.KafkaConfig())
 	if err != nil {
 		return "", fmt.Errorf("failed to create Kafka producer: %w", err)
 	}
 
-	defer producer.Close() // Ensure producer is closed to release resources
+	defer producer.Close()
 
 	messageBody := map[string]string{
 		"eventType": "signup_notification",
@@ -72,7 +72,6 @@ func (userService *UserServiceImpl) CreateUser(ctx *fiber.Ctx, userRequest *user
 		return "", fmt.Errorf("failed to produce Kafka message: %w", err)
 	}
 
-	// Produce Kafka message
 	topic := "signup_user"
 	err = producer.Produce(&kafka.Message{
 		TopicPartition: kafka.TopicPartition{
@@ -80,7 +79,7 @@ func (userService *UserServiceImpl) CreateUser(ctx *fiber.Ctx, userRequest *user
 			Partition: kafka.PartitionAny,
 		},
 		Value: messageValue,
-	}, nil) // Delivery channel
+	}, nil)
 
 	if err != nil {
 		return "", fmt.Errorf("failed to produce Kafka message: %w", err)
