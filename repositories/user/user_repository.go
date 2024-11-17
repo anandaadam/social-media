@@ -8,5 +8,5 @@ import (
 )
 
 type UserRepository interface {
-	CreateUser(ctx *fiber.Ctx, db *gorm.DB, useReq *user.CreateUserRequest) (string, error)
+	CreateUser(ctx *fiber.Ctx, db *gorm.DB, userInput *user.User) (string, error)
 }
