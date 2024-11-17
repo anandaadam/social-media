@@ -8,4 +8,5 @@ import (
 
 type UserService interface {
 	CreateUser(ctx *fiber.Ctx, userRequest *user.CreateUserRequest) (string, error)
+	PublishUserEvent(sendTo string) (string, error)
 }
