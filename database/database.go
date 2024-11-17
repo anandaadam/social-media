@@ -3,22 +3,17 @@ package database
 import (
 	"fmt"
 	"log"
-	"os"
+	"user-service/config"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 func GetDBConnection() (db *gorm.DB, err error) {
-	dbHost := os.Getenv("DB_HOST")
-	dbUser := os.Getenv("DB_USERNAME")
-	dbPassword := os.Getenv("DB_PASSWORD")
-	dbName := os.Getenv("DB_NAME")
-	dbPort := os.Getenv("DB_PORT")
-	dbTimezone := "Asia/Jakarta"
+	config := config.GetDBConfig()
 
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable&TimeZone=%s",
-		dbUser, dbPassword, dbHost, dbPort, dbName, dbTimezone)
+		config.Username, config.Password, config.Host, config.Port, config.Name, config.TimeZone)
 
 	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 
