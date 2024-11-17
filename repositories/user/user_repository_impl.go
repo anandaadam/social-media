@@ -1,7 +1,6 @@
 package user_repository
 
 import (
-	"time"
 	"user-service/models/user"
 
 	"github.com/gofiber/fiber/v2"
@@ -14,15 +13,8 @@ func NewUserRepository() *UserRepositoryImpl {
 	return &UserRepositoryImpl{}
 }
 
-func (repository *UserRepositoryImpl) CreateUser(ctx *fiber.Ctx, tx *gorm.DB, useReq *user.CreateUserRequest) (string, error) {
-	insertedUser := &user.User{
-		Email:     useReq.Email,
-		Password:  useReq.Password,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
+func (repository *UserRepositoryImpl) CreateUser(ctx *fiber.Ctx, tx *gorm.DB, userInput *user.User) (string, error) {
+	err := tx.Create(userInput).Error
 
-	err := tx.Create(insertedUser).Error
-
-	return insertedUser.Email, err
+	return userInput.Email, err
 }
