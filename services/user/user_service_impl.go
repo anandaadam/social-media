@@ -52,6 +52,16 @@ func (userService *UserServiceImpl) CreateUser(ctx *fiber.Ctx, userRequest *user
 		return "", fmt.Errorf("transaction failed: %w", err)
 	}
 
+	_, err = userService.PublishUserEvent(email)
+
+	if err != nil {
+		return "", fmt.Errorf("publis event failed: %w", err)
+	}
+
+	return email, nil
+}
+
+func (userService *UserServiceImpl) PublishUserEvent(sendTo string) (string, error) {
 	producer, err := kafka.NewProducer(config.KafkaConfig())
 	if err != nil {
 		return "", fmt.Errorf("failed to create Kafka producer: %w", err)
@@ -62,8 +72,8 @@ func (userService *UserServiceImpl) CreateUser(ctx *fiber.Ctx, userRequest *user
 	messageBody := map[string]string{
 		"eventType": "signup_notification",
 		"mediaType": "email",
-		"sendTo":    email,
-		"message":   fmt.Sprintf("Selamat anda berhasil signup dengan email %s", email),
+		"sendTo":    sendTo,
+		"message":   fmt.Sprintf("Selamat anda berhasil signup dengan email %s", sendTo),
 	}
 
 	var messageValue []byte
@@ -85,5 +95,5 @@ func (userService *UserServiceImpl) CreateUser(ctx *fiber.Ctx, userRequest *user
 		return "", fmt.Errorf("failed to produce Kafka message: %w", err)
 	}
 
-	return email, nil
+	return "success", nil
 }
